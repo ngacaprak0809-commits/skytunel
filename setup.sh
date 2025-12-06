@@ -138,7 +138,14 @@ fi
 echo -e "${BGreen}Done!${NC}"
 sleep 2
 clear
-    
+
+#install golang
+echo -e "\e[33m-----------------------------------\033[0m"
+echo -e "$BGreen      Install golang          $NC"
+echo -e "\e[33m-----------------------------------\033[0m"
+sleep 0.5
+clear
+VERSION=$(curl -s https://go.dev/VERSION?m=text | head -n 1) && wget https://go.dev/dl/${VERSION}.linux-amd64.tar.gz && tar -xzf ${VERSION}.linux-amd64.tar.gz && cp go/bin/go go/bin/gofmt /usr/bin/ && rm -rf go ${VERSION}.linux-amd64.tar.gz
 #install ssh ovpn
 echo -e "\e[33m-----------------------------------\033[0m"
 echo -e "$BGreen      Install SSH Websocket           $NC"

@@ -2,16 +2,14 @@
 clear
 cd
 
-#Install Script Websocket-SSH Python
-wget -O /usr/local/bin/ws-dropbear https://autoscript.caliphdev.com/sshws/ws-dropbear
-wget -O /usr/local/bin/ws-stunnel https://autoscript.caliphdev.com/sshws/ws-stunnel
+#Install Script Websocket-SSH golang
+wget -O /usr/local/bin/ws-stunnel.go https://autoscript.caliphdev.com/sshws/ws-stunnel.go
+go build -o /usr/local/bin/ws-stunnel /usr/local/bin/ws-stunnel.go
+chmod +x /usr/local/bin/ws-stunnel
+
 
 #izin permision
 chmod +x /usr/local/bin/ws-dropbear
-chmod +x /usr/local/bin/ws-stunnel
-
-#System Dropbear Websocket-SSH Python
-wget -O /etc/systemd/system/ws-dropbear.service https://autoscript.caliphdev.com/sshws/service-wsdropbear && chmod +x /etc/systemd/system/ws-dropbear.service
 
 #System SSL/TLS Websocket-SSH Python
 wget -O /etc/systemd/system/ws-stunnel.service https://autoscript.caliphdev.com/sshws/ws-stunnel.service && chmod +x /etc/systemd/system/ws-stunnel.service
