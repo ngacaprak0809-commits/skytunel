@@ -118,6 +118,7 @@ echo -e "\e[1;36m 9 \e[0m: Menu Setting"
 echo -e "\e[1;36m 10 \e[0m: Status Service"
 echo -e "\e[1;36m 11 \e[0m: Clear RAM Cache"
 echo -e "\e[1;36m 12 \e[0m: Reboot VPS"
+echo -e "\e[1;36m r \e[0m: Xray Renew (Expired)"
 echo -e "\e[1;36m x \e[0m: Exit Script"
 echo -e   ""
 echo -e "\e[1;33m -------------------------------------------------\e[0m"
@@ -142,6 +143,7 @@ case $opt in
 10) clear ; running ;;
 11) clear ; clearcache ;;
 12) clear ; reboot ; /sbin/reboot ;;
+r) clear ; xray-renew ;;
 x) exit ;;
 *) echo "Silahkan masukkan pilihan dengan benar! " ; sleep 1 ; menu ;;
 esac
