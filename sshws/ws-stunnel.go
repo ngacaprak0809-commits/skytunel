@@ -6,39 +6,42 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"time"
 )
 
 const (
 	BUFLEN       = 4096 * 4
-	TIMEOUT      = 60 * time.Second
-	DEFAULT_HOST = "127.0.0.1:22"
+	DEFAULT_HOST = "127.0.0.1:69"
 )
 
-// Kalau mau pakai password, isi di sini
+// isi password di sini kalau mau pakai X-Pass
 const PASS = ""
 
-// HTTP response untuk upgrade/tunnel
+// HTTP response untuk upgrade / switch protocol
 var RESPONSE = []byte("HTTP/1.1 101 Switching Protocols\r\nContent-Length: 104857600000\r\n\r\n")
 
 func main() {
-	listenAddr := flag.String("b", "127.0.0.1", "bind address")
-	listenPort := flag.Int("p", 700, "port")
+	// flag -b (bind) dan -p (port) mirip parse_args di Python
+	bindAddr := flag.String("b", "127.0.0.1", "bind address")
+	port := flag.Int("p", 700, "port")
 	flag.Parse()
 
-	addr := fmt.Sprintf("%s:%d", *listenAddr, *listenPort)
+	listenAddr := fmt.Sprintf("%s:%d", *bindAddr, *port)
 
-	ln, err := net.Listen("tcp", addr)
+	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		log.Fatalf("Gagal listen di %s: %v", addr, err)
+		log.Fatalf("Gagal listen di %s: %v", listenAddr, err)
 	}
 	defer ln.Close()
 
+	log.Println()
 	log.Println(":-------GoPythonProxy-------:")
-	log.Printf("Listening addr: %s\n", *listenAddr)
-	log.Printf("Listening port: %d\n", *listenPort)
+	log.Printf("Listening addr: %s\n", *bindAddr)
+	log.Printf("Listening port: %d\n", *port)
 	log.Println(":---------------------------:")
+	log.Println()
 
 	for {
 		conn, err := ln.Accept()
@@ -51,22 +54,24 @@ func main() {
 }
 
 func handleConnection(client net.Conn) {
-	defer client.Close()
 	remoteAddr := client.RemoteAddr().String()
 	logPrefix := fmt.Sprintf("Connection: %s", remoteAddr)
+	defer func() {
+		client.Close()
+		log.Printf("%s - closed", logPrefix)
+	}()
 
-	// batas waktu baca pertama (request header)
-	_ = client.SetReadDeadline(time.Now().Add(2 * time.Second))
+	// Set read timeout kecil untuk header awal
+	_ = client.SetReadDeadline(time.Now().Add(5 * time.Second))
 
 	buf := make([]byte, BUFLEN)
 	n, err := client.Read(buf)
 	if err != nil {
-		if !isTimeout(err) {
-			log.Printf("%s - error read initial: %v", logPrefix, err)
-		}
+		log.Printf("%s - error read initial: %v", logPrefix, err)
 		return
 	}
-	// setelah baca awal, hapus deadline
+
+	// Setelah header dibaca, hilangkan deadline
 	_ = client.SetReadDeadline(time.Time{})
 
 	reqStr := string(buf[:n])
@@ -78,26 +83,27 @@ func handleConnection(client net.Conn) {
 
 	split := findHeader(reqStr, "X-Split")
 	if split != "" {
-		// buang buffer tambahan
+		// Buang data tambahan kalau ada X-Split (mirip Python)
 		_, _ = client.Read(buf)
 	}
 
 	if hostPort == "" {
 		log.Println("- No X-Real-Host!")
-		client.Write([]byte("HTTP/1.1 400 NoXRealHost!\r\n\r\n"))
+		_, _ = client.Write([]byte("HTTP/1.1 400 NoXRealHost!\r\n\r\n"))
 		return
 	}
 
 	passwd := findHeader(reqStr, "X-Pass")
 
-	// Logic password & security
-	if PASS != "" && passwd == PASS {
-		// ok
-	} else if PASS != "" && passwd != PASS {
-		client.Write([]byte("HTTP/1.1 400 WrongPass!\r\n\r\n"))
+	// Logic auth & keamanan mirip Python:
+	// - Kalau PASS diisi: wajib benar
+	// - Kalau PASS kosong: hanya boleh 127.0.0.1 / localhost
+	if PASS != "" && passwd != PASS {
+		_, _ = client.Write([]byte("HTTP/1.1 400 WrongPass!\r\n\r\n"))
 		return
-	} else if !strings.HasPrefix(hostPort, "127.0.0.1") && !strings.HasPrefix(hostPort, "localhost") {
-		client.Write([]byte("HTTP/1.1 403 Forbidden!\r\n\r\n"))
+	}
+	if PASS == "" && !strings.HasPrefix(hostPort, "127.0.0.1") && !strings.HasPrefix(hostPort, "localhost") {
+		_, _ = client.Write([]byte("HTTP/1.1 403 Forbidden!\r\n\r\n"))
 		return
 	}
 
@@ -106,27 +112,23 @@ func handleConnection(client net.Conn) {
 	target, err := connectTarget(hostPort)
 	if err != nil {
 		log.Printf("%s - error connect target: %v", logPrefix, err)
-		client.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
+		_, _ = client.Write([]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"))
 		return
 	}
 	defer target.Close()
 
-	// kirim response upgrade
+	// Kirim response upgrade seperti di Python
 	if _, err := client.Write(RESPONSE); err != nil {
 		log.Printf("%s - error send RESPONSE: %v", logPrefix, err)
 		return
 	}
 
-	// Setelah tunnel terbentuk, bikin deadline umum
-	_ = client.SetDeadline(time.Now().Add(TIMEOUT))
-	_ = target.SetDeadline(time.Now().Add(TIMEOUT))
-
-	// Tunnel dua arah
+	// Tidak pakai SetDeadline global di sini, biar koneksi bisa hidup lama
 	pipe(client, target, logPrefix)
 }
 
 func findHeader(data, header string) string {
-	// mirip versi Python: cari "Header: value\r\n"
+	// Cari "Header: xxx\r\n"
 	search := header + ": "
 	idx := strings.Index(data, search)
 	if idx == -1 {
@@ -141,11 +143,12 @@ func findHeader(data, header string) string {
 }
 
 func connectTarget(hostPort string) (net.Conn, error) {
-	// kalau tanpa :port, default 443
+	// kalau tidak ada port, default 443 (mirip method CONNECT Python)
 	if !strings.Contains(hostPort, ":") {
 		hostPort = hostPort + ":443"
 	}
-	return net.Dial("tcp", hostPort)
+	// bisa pakai DialTimeout supaya tidak ngegantung
+	return net.DialTimeout("tcp", hostPort, 10*time.Second)
 }
 
 func pipe(a, b net.Conn, logPrefix string) {
@@ -169,11 +172,20 @@ func pipe(a, b net.Conn, logPrefix string) {
 		done <- struct{}{}
 	}()
 
-	// tunggu salah satu selesai
+	// tunggu salah satu arah selesai, lalu selesai; defer di luar yg nutup koneksi
 	<-done
 }
 
 func isTimeout(err error) bool {
+	if err == nil {
+		return false
+	}
 	nerr, ok := err.(net.Error)
 	return ok && nerr.Timeout()
+}
+
+// optional: kalau mau print ke file log beda, bisa atur di sini
+func init() {
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
