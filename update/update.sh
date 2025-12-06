@@ -1,18 +1,10 @@
 #!/bin/bash
-###########- COLOR CODE -##############
-colornow=$(cat /etc/rmbl/theme/color.conf)
-NC="\e[0m"
-RED="\033[0;31m"
-COLOR1="$(cat /etc/rmbl/theme/$colornow | grep -w "TEXT" | cut -d: -f2|sed 's/ //g')"
-COLBG1="$(cat /etc/rmbl/theme/$colornow | grep -w "BG" | cut -d: -f2|sed 's/ //g')"
-WH='\033[1;37m'
-###########- END COLOR CODE -##########
 
-echo -e "$COLOR1┌─────────────────────────────────────────────────┐${NC}"
-echo -e "$COLOR1│${NC} ${WH}          UPDATE SCRIPT BY CALIPHDEV           ${NC} $COLOR1│${NC}"
-echo -e "$COLOR1└─────────────────────────────────────────────────┘${NC}"
-echo -e ""
-echo -e "  \033[1;91m Update Script...\033[1;37m"
+echo "┌─────────────────────────────────────────────────┐"
+echo "│            UPDATE SCRIPT BY CALIPHDEV           │"
+echo "└─────────────────────────────────────────────────┘"
+echo ""
+echo "Update Script..."
 
 # Define base URL
 BASE_URL="https://autoscript.caliphdev.com"
@@ -23,13 +15,13 @@ update_file() {
     local file_url=$2
     local tmp_file="/tmp/$(basename "$file_path")"
 
-    echo -e "  Downloading $(basename "$file_path")..."
+    echo "Downloading $(basename "$file_path")..."
     if wget -q -O "$tmp_file" "$file_url"; then
         mv "$tmp_file" "$file_path"
         chmod +x "$file_path"
-        echo -e "  [${WH}OK${NC}] Updated $file_path"
+        echo "[OK] Updated $file_path"
     else
-        echo -e "  [${RED}FAIL${NC}] Failed to download $file_path"
+        echo "[FAIL] Failed to download $file_path"
     fi
 }
 
@@ -56,16 +48,16 @@ update_file "/usr/bin/m-sstp" "$BASE_URL/menu/m-sstp.sh"
 update_file "/usr/bin/m-update" "$BASE_URL/update/update.sh"
 
 # Update version file
-echo -e "  Updating Version..."
+echo "Updating Version..."
 serverV=$(curl -sS "$BASE_URL/menu/versi")
 if [ -n "$serverV" ]; then
     echo "$serverV" > /opt/.ver
-    echo -e "  [${WH}OK${NC}] Version updated to $serverV"
+    echo "[OK] Version updated to $serverV"
 else
-    echo -e "  [${RED}FAIL${NC}] Failed to fetch version"
+    echo "[FAIL] Failed to fetch version"
 fi
 
-echo -e ""
-echo -e "  \033[1;91m Update Done...\033[1;37m"
+echo ""
+echo "Update Done..."
 sleep 2
 menu
