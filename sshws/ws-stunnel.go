@@ -12,7 +12,7 @@ import (
 
 const (
 	BUFLEN       = 4096 * 4
-	DEFAULT_HOST = "127.0.0.1:69"
+	DEFAULT_HOST = "127.0.0.1:22"
 )
 
 // isi password di sini kalau mau pakai X-Pass
