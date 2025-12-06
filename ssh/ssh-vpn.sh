@@ -315,6 +315,8 @@ wget -O running "https://autoscript.caliphdev.com/menu/running.sh"
 wget -O clearcache "https://autoscript.caliphdev.com/menu/clearcache.sh"
 wget -O m-ssws "https://autoscript.caliphdev.com/menu/m-ssws.sh"
 wget -O m-trojan "https://autoscript.caliphdev.com/menu/m-trojan.sh"
+wget -O xray-renew "https://autoscript.caliphdev.com/xray/xray-renew.sh"
+
 
 # menu ssh ovpn
 wget -O m-sshovpn "https://autoscript.caliphdev.com/menu/m-sshovpn.sh"
@@ -362,6 +364,7 @@ chmod +x m-pptp
 chmod +x m-sstp
 chmod +x m-l2tp
 
+
 chmod +x m-sshovpn
 chmod +x usernew
 chmod +x trial
@@ -376,6 +379,7 @@ chmod +x tendang
 chmod +x sshws
 chmod +x user-lock
 chmod +x user-unlock
+chmod +x xray-renew
 
 chmod +x m-system
 chmod +x m-domain
