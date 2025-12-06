@@ -41,9 +41,6 @@ echo -e "[ ${BGreen}ok${NC} ] Restarting cron "
 /etc/init.d/ssh restart >/dev/null 2>&1
 sleep 0.5
 echo -e "[ ${BGreen}ok${NC} ] Restarting ssh "
-/etc/init.d/dropbear restart >/dev/null 2>&1
-sleep 0.5
-echo -e "[ ${BGreen}ok${NC} ] Restarting dropbear "
 /etc/init.d/fail2ban restart >/dev/null 2>&1
 sleep 0.5
 echo -e "[ ${BGreen}ok${NC} ] Restarting fail2ban "
@@ -77,7 +74,6 @@ echo "   - Squid Proxy              : 3128, 8000"  | tee -a log-install.txt
 echo "   - SSH Websocket            : 80" | tee -a log-install.txt
 echo "   - SSH SSL Websocket        : 443" | tee -a log-install.txt
 echo "   - Stunnel4                 : 222, 777" | tee -a log-install.txt
-echo "   - Dropbear                 : 109, 143" | tee -a log-install.txt
 echo "   - Badvpn                   : 7100-7900" | tee -a log-install.txt
 echo "   - Nginx                    : 81" | tee -a log-install.txt
 echo "   - Vmess WS TLS             : 443" | tee -a log-install.txt

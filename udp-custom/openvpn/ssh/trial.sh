@@ -13,7 +13,6 @@ clear
 IP=$(curl -sS ifconfig.me);
 #ovpn=`cat /root/log-install.txt | grep -w "OpenVPN" | cut -f2 -d: | awk '{print $6}'`
 opensh=`cat /root/log-install.txt | grep -w "OpenSSH" | cut -f2 -d: | awk '{print $1}'`
-db=`cat /root/log-install.txt | grep -w "Dropbear" | cut -f2 -d: | awk '{print $1,$2}'`
 ssl="$(cat ~/log-install.txt | grep -w "Stunnel4" | cut -d: -f2)"
 #sqd="$(cat ~/log-install.txt | grep -w "Squid Proxy" | cut -d: -f2)"
 export sqd="$(cat ~/log-install.txt | grep -w "Squid" | cut -d: -f2)"
@@ -47,7 +46,6 @@ echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━�
 echo -e "IP         : $IP"
 echo -e "Host       : $domen"
 echo -e "OpenSSH    : $opensh"
-echo -e "Dropbear   : $db"
 echo -e "SSH WS     : $portsshws"
 echo -e "SSH SSL WS : $wsssl"
 echo -e "SSL/TLS    :$ssl"
@@ -77,7 +75,6 @@ echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━�
 echo -e "IP         : $IP"
 echo -e "Host       : $domen"
 echo -e "OpenSSH    : $opensh"
-echo -e "Dropbear   : $db"
 echo -e "SSH WS     : $portsshws"
 echo -e "SSH SSL WS : $wsssl"
 echo -e "SSL/TLS    :$ssl"

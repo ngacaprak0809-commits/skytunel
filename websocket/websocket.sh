@@ -77,9 +77,6 @@ EOF
 # // PYTHON WEBSOCKET TLS && NONE
 wget -q -O /usr/local/bin/ws-https https://raw.githubusercontent.com/${GitUser}/AutoScriptXray/master/websocket/ws-https; chmod +x /usr/local/bin/ws-https
 
-# // PYTHON WEBSOCKET DROPBEAR
-wget -q -O /usr/local/bin/ws-http https://raw.githubusercontent.com/${GitUser}/AutoScriptXray/master/websocket/ws-http; chmod +x /usr/local/bin/ws-http
-
 # // PYTHON WEBSOCKET OVPN
 wget -q -O /usr/local/bin/ws-ovpn https://raw.githubusercontent.com/${GitUser}/AutoScriptXray/master/websocket/ws-ovpn; chmod +x /usr/local/bin/ws-ovpn
 

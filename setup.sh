@@ -145,7 +145,10 @@ echo -e "$BGreen      Install golang          $NC"
 echo -e "\e[33m-----------------------------------\033[0m"
 sleep 0.5
 clear
-VERSION=$(curl -s https://go.dev/VERSION?m=text | head -n 1) && wget https://go.dev/dl/${VERSION}.linux-amd64.tar.gz && tar -xzf ${VERSION}.linux-amd64.tar.gz && cp go/bin/go go/bin/gofmt /usr/bin/ && rm -rf go ${VERSION}.linux-amd64.tar.gz
+curl -s https://go.dev/VERSION?m=text | head -n 1 | \
+    xargs -I {} wget https://go.dev/dl/{}.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go*.linux-amd64.tar.gz && \
+    rm go*.linux-amd64.tar.gz
 #install ssh ovpn
 echo -e "\e[33m-----------------------------------\033[0m"
 echo -e "$BGreen      Install SSH Websocket           $NC"
@@ -239,7 +242,6 @@ echo "   - OpenSSH                  : 22"  | tee -a log-install.txt
 echo "   - SSH Websocket            : 80" | tee -a log-install.txt
 echo "   - SSH SSL Websocket        : 443" | tee -a log-install.txt
 echo "   - Stunnel4                 : 222, 777" | tee -a log-install.txt
-echo "   - Dropbear                 : 109, 143" | tee -a log-install.txt
 echo "   - Badvpn                   : 7100-7900" | tee -a log-install.txt
 echo "   - Nginx                    : 81" | tee -a log-install.txt
 echo "   - Vmess WS TLS             : 443" | tee -a log-install.txt

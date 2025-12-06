@@ -6,7 +6,6 @@ echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━�
 echo -e ""
 echo -e " [\e[36m•1\e[0m] Restart All Services"
 echo -e " [\e[36m•2\e[0m] Restart OpenSSH"
-echo -e " [\e[36m•3\e[0m] Restart Dropbear"
 echo -e " [\e[36m•4\e[0m] Restart Stunnel4"
 echo -e " [\e[36m•5\e[0m] Restart OpenVPN"
 echo -e " [\e[36m•6\e[0m] Restart Squid"
@@ -36,7 +35,6 @@ case $Restart in
                 echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
                 sleep 1
                 /etc/init.d/ssh restart
-                /etc/init.d/dropbear restart
                 /etc/init.d/stunnel4 restart
                 /etc/init.d/openvpn restart
                 /etc/init.d/fail2ban restart
@@ -56,7 +54,6 @@ case $Restart in
                 echo -e "[ \033[32mok\033[0m ] Restarting websocket Service (via systemctl) "
                 sleep 0.5
                 systemctl restart sshws.service
-                systemctl restart ws-dropbear.service
                 systemctl restart ws-stunnel.service
                 sleep 0.5
                 echo -e "[ \033[32mok\033[0m ] Restarting Trojan Go Service (via systemctl) "
@@ -95,10 +92,7 @@ case $Restart in
                 echo -e ""
                 echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
                 sleep 1
-                /etc/init.d/dropbear restart
-                sleep 0.5
-                echo -e "[ \033[32mInfo\033[0m ] Dropbear Service Restarted"
-                echo ""
+                 echo ""
                 echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
                 echo ""
                 read -n 1 -s -r -p "Press any key to back on system menu"
@@ -220,7 +214,7 @@ case $Restart in
                 echo -e "[ \033[32mok\033[0m ] Restarting websocket Service (via systemctl) "
                 sleep 0.5
                 systemctl restart sshws.service
-                systemctl restart ws-dropbear.service
+              
                 systemctl restart ws-stunnel.service
                 sleep 0.5
                 echo -e "[ \033[32mInfo\033[0m ] WEBSOCKET Service Restarted"

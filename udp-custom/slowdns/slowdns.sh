@@ -41,7 +41,7 @@ apt install ncurses-utils -y
 apt install screen -y
 apt install cron -y
 apt install iptables -y
-apt install -y git screen whois dropbear wget
+apt install -y git screen whois wget
 #apt install -y pwgen python php jq curl
 apt install -y sudo gnutls-bin
 #apt install -y mlocate dh-make libaudit-dev build-essential

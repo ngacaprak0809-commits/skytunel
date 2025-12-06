@@ -55,14 +55,12 @@ vless_tls_v2ray_status=$(systemctl status xray | grep Active | awk '{print $3}' 
 vless_nontls_v2ray_status=$(systemctl status xray | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 shadowsocks=$(systemctl status xray | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 trojan_server=$(systemctl status xray | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
-dropbear_status=$(/etc/init.d/dropbear status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 stunnel_service=$(/etc/init.d/stunnel4 status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 ssh_service=$(/etc/init.d/ssh status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 vnstat_service=$(/etc/init.d/vnstat status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 cron_service=$(/etc/init.d/cron status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 fail2ban_service=$(/etc/init.d/fail2ban status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 wstls=$(systemctl status ws-stunnel.service | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
-wsdrop=$(systemctl status ws-dropbear.service | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 
 # COLOR VALIDATION
 RED='\033[0;31m'
@@ -150,12 +148,7 @@ if [[ $trojan_server == "running" ]]; then
 else
    status_virus_trojan="${RED}  Not Running ${NC}  ( Error )${NC}"
 fi
-# STATUS SERVICE DROPBEAR
-if [[ $dropbear_status == "running" ]]; then 
-   status_beruangjatuh=" ${GREEN}Running${NC} ( No Error )${NC}"
-else
-   status_beruangjatuh="${RED}  Not Running ${NC}  ( Error )${NC}"
-fi
+
 
 # STATUS SERVICE STUNNEL
 if [[ $stunnel_service == "running" ]]; then 
@@ -168,13 +161,6 @@ if [[ $wstls == "running" ]]; then
    swstls=" ${GREEN}Running ${NC}( No Error )${NC}"
 else
    swstls="${RED}  Not Running ${NC}  ( Error )${NC}"
-fi
-
-# STATUS SERVICE WEBSOCKET DROPBEAR
-if [[ $wsdrop == "running" ]]; then 
-   swsdrop=" ${GREEN}Running ${NC}( No Error )${NC}"
-else
-   swsdrop="${RED}  Not Running ${NC}  ( Error )${NC}"
 fi
 
 # STATUS SHADOWSOCKS
@@ -218,7 +204,6 @@ echo -e "\e[1;33m -------------------------------------------------\e[0m"
 echo -e "\e[1;34m                SERVICE INFORMATION               \e[0m"
 echo -e "\e[1;33m -------------------------------------------------\e[0m"
 echo -e "\e[1;32m SSH / TUN            \e[0m: $status_ssh"
-echo -e "\e[1;32m Dropbear             \e[0m: $status_beruangjatuh"
 echo -e "\e[1;32m Stunnel4             \e[0m: $status_stunnel"
 echo -e "\e[1;32m Fail2Ban             \e[0m: $status_fail2ban"
 echo -e "\e[1;32m Crons                \e[0m: $status_cron"
