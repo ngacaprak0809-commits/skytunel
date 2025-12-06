@@ -156,6 +156,13 @@ echo -e "\e[33m-----------------------------------\033[0m"
 sleep 0.5
 clear
 wget https://autoscript.caliphdev.com/ssh/ssh-vpn.sh && chmod +x ssh-vpn.sh && ./ssh-vpn.sh
+#Instal Update Script
+echo -e "\e[33m-----------------------------------\033[0m"
+echo -e "$BGreen      Install Update Script           $NC"
+echo -e "\e[33m-----------------------------------\033[0m"
+sleep 0.5
+clear
+wget -O /usr/bin/m-update https://autoscript.caliphdev.com/update/update.sh && chmod +x /usr/bin/m-update
 #Instal Xray
 echo -e "\e[33m-----------------------------------\033[0m"
 echo -e "$BGreen          Install XRAY              $NC"
