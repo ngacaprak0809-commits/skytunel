@@ -33,10 +33,10 @@ uuid=$(echo "$line"     | awk '{print $4}')
 oldexp=$(echo "$line"   | awk '{print $5}')
 
 echo ""
-echo "User   : $user"
-echo "Proto  : $proto"
-echo "UUID   : $uuid"
-echo "Expire lama : $oldexp"
+echo "User       : $user"
+echo "Proto      : $proto"
+echo "UUID       : $uuid"
+echo "Expire lama: $oldexp"
 echo ""
 
 echo -n "Perpanjang berapa hari dari hari ini? : "
@@ -55,66 +55,48 @@ newexp=$(date -d "$days days" +"%Y-%m-%d") || {
 echo "Expire baru: $newexp"
 echo ""
 
-# Sisipkan ke config.json sesuai proto
+# ===============================
+# SISIPKAN KE CONFIG SESUAI FORMAT MU
+# ===============================
 case "$proto" in
     vmess)
         # VMESS WS (marker: #vmess)
-        sed -i '/#vmess$/i\### '"$user $newexp"'\
-      {\
-        "id": "'"$uuid"'",\
-        "alterId": 0\
-      },' "$CONFIG"
+        sed -i '/#vmess$/a\### '"$user $newexp"'\
+},{"id": "'""$uuid""'","alterId": '"0"',"email": "'""$user""'"' "$CONFIG"
 
         # VMESS gRPC (marker: #vmessgrpc)
-        sed -i '/#vmessgrpc$/i\### '"$user $newexp"'\
-      {\
-        "id": "'"$uuid"'",\
-        "alterId": 0\
-      },' "$CONFIG"
+        sed -i '/#vmessgrpc$/a\### '"$user $newexp"'\
+},{"id": "'""$uuid""'","alterId": '"0"',"email": "'""$user""'"' "$CONFIG"
         ;;
 
     vless)
         # VLESS WS (marker: #vless)
-        sed -i '/#vless$/i\#& '"$user $newexp"'\
-      {\
-        "id": "'"$uuid"'"\
-      },' "$CONFIG"
+        sed -i '/#vless$/a\#& '"$user $newexp"'\
+},{"id": "'""$uuid""'","email": "'""$user""'"' "$CONFIG"
 
         # VLESS gRPC (marker: #vlessgrpc)
-        sed -i '/#vlessgrpc$/i\#& '"$user $newexp"'\
-      {\
-        "id": "'"$uuid"'"\
-      },' "$CONFIG"
+        sed -i '/#vlessgrpc$/a\#& '"$user $newexp"'\
+},{"id": "'""$uuid""'","email": "'""$user""'"' "$CONFIG"
         ;;
 
     trojan)
         # TROJAN WS (marker: #trojanws)
-        sed -i '/#trojanws$/i\#! '"$user $newexp"'\
-      {\
-        "password": "'"$uuid"'"\
-      },' "$CONFIG"
+        sed -i '/#trojanws$/a\#! '"$user $newexp"'\
+},{"password": "'""$uuid""'","email": "'""$user""'"' "$CONFIG"
 
         # TROJAN gRPC (marker: #trojangrpc)
-        sed -i '/#trojangrpc$/i\#! '"$user $newexp"'\
-      {\
-        "password": "'"$uuid"'"\
-      },' "$CONFIG"
+        sed -i '/#trojangrpc$/a\#! '"$user $newexp"'\
+},{"password": "'""$uuid""'","email": "'""$user""'"' "$CONFIG"
         ;;
 
     ss)
-        # Shadowsocks WS (marker: #ssws)
-        sed -i '/#ssws$/i\### '"$user $newexp"'\
-      {\
-        "method": "aes-128-gcm",\
-        "password": "'"$uuid"'"\
-      },' "$CONFIG"
+        # SHADOWSOCKS WS (marker: #ssws)
+        sed -i '/#ssws$/a\### '"$user $newexp"'\
+},{"method": "aes-128-gcm","password": "'""$uuid""'","email": "'""$user""'"' "$CONFIG"
 
-        # Shadowsocks gRPC (marker: #ssgrpc)
-        sed -i '/#ssgrpc$/i\### '"$user $newexp"'\
-      {\
-        "method": "aes-128-gcm",\
-        "password": "'"$uuid"'"\
-      },' "$CONFIG"
+        # SHADOWSOCKS gRPC (marker: #ssgrpc)
+        sed -i '/#ssgrpc$/a\### '"$user $newexp"'\
+},{"method": "aes-128-gcm","password": "'""$uuid""'","email": "'""$user""'"' "$CONFIG"
         ;;
 
     *)
