@@ -190,9 +190,6 @@ if [ "$BASH" ]; then
 fi
 
 mesg n || true
-clear
-neofetch
-echo "Type 'menu' to display the vpn menu"
 END
 chmod 644 /root/.profile
 
