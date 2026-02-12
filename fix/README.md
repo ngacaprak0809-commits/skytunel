@@ -1,5 +1,5 @@
 # update speedtest
 
 ```
-apt update && apt install wget -y && wget https://autoscript.caliphdev.com/fix/speedtestfix.sh && chmod +x speedtestfix.sh && ./speedtestfix.sh
+apt update && apt install wget -y && wget https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/main/fix/speedtestfix.sh && chmod +x speedtestfix.sh && ./speedtestfix.sh
 ```
