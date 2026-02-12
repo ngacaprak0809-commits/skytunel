@@ -13,7 +13,7 @@ sleep 2
 cd
 
 # // GIT USER
-GitUser="givpn"
+GitUser="ngacaprak0809-commits"
 
 # // SYSTEM WEBSOCKET HTTPS 443
 cat <<EOF> /etc/systemd/system/ws-https.service
@@ -58,7 +58,7 @@ EOF
 cat <<EOF> /etc/systemd/system/ws-ovpn.service
 [Unit]
 Description=Python Proxy
-Documentation=https://github.com/givpn/
+Documentation=https://github.com/ngacaprak0809-commits/
 After=network.target nss-lookup.target
 
 [Service]
