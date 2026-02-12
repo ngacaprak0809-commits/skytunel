@@ -6,19 +6,29 @@ import sys
 import time
 import getopt
 
-# Listen
-LISTENING_ADDR = '127.0.0.1'
-if sys.argv[1:]:
-  LISTENING_PORT = sys.argv[1]
-else:
-  LISTENING_PORT = 2091
+# Listen (HTTPS/TLS)
+LISTENING_ADDR = '0.0.0.0'
+
+def parse_ports(args):
+    """Return list of port numbers; allow comma-separated or repeated args."""
+    if not args:
+        return [443]
+    ports = []
+    for a in args:
+        for part in str(a).split(','):
+            part = part.strip()
+            if part:
+                ports.append(int(part))
+    return ports
+
+LISTENING_PORTS = parse_ports(sys.argv[1:])
 #Pass
 PASS = ''
 
 # CONST
 BUFLEN = 4096 * 4
 TIMEOUT = 60
-DEFAULT_HOST = '127.0.0.1:69'
+DEFAULT_HOST = '127.0.0.1:22'
 RESPONSE = b'HTTP/1.1 101 <b><u><font color="purple"> (HTTPS) Script By NevermoreSSH t.me/todfix667</font></b>\r\n\r\n\r\n\r\nContent-Length: 104857600000\r\n\r\n'
 
 class Server(threading.Thread):
@@ -257,17 +267,20 @@ def parse_args(argv):
 def main(host=LISTENING_ADDR, port=LISTENING_PORT):
     print("\n:-------PythonProxy-------:\n")
     print("Listening addr: " + LISTENING_ADDR)
-    print("Listening port: " + str(LISTENING_PORT) + "\n")
+    print("Listening ports: " + ', '.join(map(str, LISTENING_PORTS)) + "\n")
     print(":-------------------------:\n")
-    server = Server(LISTENING_ADDR, LISTENING_PORT)
-    server.start()
-    while True:
-        try:
+
+    servers = [Server(LISTENING_ADDR, p) for p in LISTENING_PORTS]
+    for s in servers:
+        s.start()
+
+    try:
+        while True:
             time.sleep(2)
-        except KeyboardInterrupt:
-            print('Stopping...')
-            server.close()
-            break
+    except KeyboardInterrupt:
+        print('Stopping...')
+        for s in servers:
+            s.close()
 
 #######    parse_args(sys.argv[1:])
 if __name__ == '__main__':
