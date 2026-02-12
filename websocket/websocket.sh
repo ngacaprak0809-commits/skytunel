@@ -58,7 +58,7 @@ EOF
 cat <<EOF> /etc/systemd/system/ws-ovpn.service
 [Unit]
 Description=Python Proxy
-Documentation=https://github.com/ngacaprak0809-commits/
+Documentation=https://github.com/givpn/
 After=network.target nss-lookup.target
 
 [Service]
@@ -75,10 +75,10 @@ WantedBy=multi-user.target
 EOF
 
 # // PYTHON WEBSOCKET TLS && NONE
-wget -q -O /usr/local/bin/ws-https https://raw.githubusercontent.com/${GitUser}/AutoScriptXray/master/websocket/ws-https; chmod +x /usr/local/bin/ws-https
+wget -q -O /usr/local/bin/ws-https https://raw.githubusercontent.com/${GitUser}/skytunel/main/websocket/ws-https; chmod +x /usr/local/bin/ws-https
 
 # // PYTHON WEBSOCKET OVPN
-wget -q -O /usr/local/bin/ws-ovpn https://raw.githubusercontent.com/${GitUser}/AutoScriptXray/master/websocket/ws-ovpn; chmod +x /usr/local/bin/ws-ovpn
+wget -q -O /usr/local/bin/ws-ovpn https://raw.githubusercontent.com/${GitUser}/skytunel/main/websocket/ws-ovpn; chmod +x /usr/local/bin/ws-ovpn
 
 # // RESTART && ENABLE SSHVPN WEBSOCKET TLS 
 systemctl daemon-reload
