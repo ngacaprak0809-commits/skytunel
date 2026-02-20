@@ -75,10 +75,10 @@ WantedBy=multi-user.target
 EOF
 
 # // PYTHON WEBSOCKET TLS && NONE
-wget -q -O /usr/local/bin/ws-https ttps://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/master/websocket/ws-https; chmod +x /usr/local/bin/ws-https
+wget -q -O /usr/local/bin/ws-https ttps://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/websocket/ws-https; chmod +x /usr/local/bin/ws-https
 
 # // PYTHON WEBSOCKET DROPBEAR
-wget -q -O /usr/local/bin/ws-http ttps://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/master/websocket/ws-http; chmod +x /usr/local/bin/ws-http
+wget -q -O /usr/local/bin/ws-http ttps://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/websocket/ws-http; chmod +x /usr/local/bin/ws-http
 
 # // PYTHON WEBSOCKET OVPN
 ttps://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/master/websocket/ws-ovpn; chmod +x /usr/local/bin/ws-ovpn
