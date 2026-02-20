@@ -7,7 +7,7 @@ echo ""
 echo "Update Script..."
 
 # Define base URL
-BASE_URL="https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main"
+BASE_URL="https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/main"
 
 # Function to download and install a file
 update_file() {
