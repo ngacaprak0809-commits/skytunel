@@ -1,74 +1,71 @@
 #!/bin/bash
 
-MAX=1
+# Default: 2 IP unik per akun (bisa diubah via argumen pertama)
+MAX=${1:-2}
+LOG=""
+SERVICE=""
+
 if [ -e "/var/log/auth.log" ]; then
-    OS=1
     LOG="/var/log/auth.log"
+    SERVICE="ssh"
 elif [ -e "/var/log/secure" ]; then
-    OS=2
     LOG="/var/log/secure"
-fi
-
-# Restart SSH service sesuai OS
-if [ $OS -eq 1 ]; then
-    service ssh restart > /dev/null 2>&1
+    SERVICE="sshd"
 else
-    service sshd restart > /dev/null 2>&1
+    echo "Tidak menemukan auth log (auth.log/secure)."
+    exit 1
 fi
 
-# Jika ada argumen, jadikan MAX
-[[ ${1+x} ]] && MAX=$1
+# Muat daftar user dengan home di /home
+mapfile -t username_list < <(awk -F: '$6 ~ /^\\/home\\// {print $1}' /etc/passwd)
 
-# Ambil daftar user di /home
-cat /etc/passwd | grep "/home/" | cut -d":" -f1 > /root/user.txt
-username_list=( $(cat /root/user.txt) )
-jumlah=()
-pid=()
+# Ambil log login SSH yang sukses
+grep -i sshd "$LOG" | grep -i "Accepted password for" > /tmp/log-ssh.txt
 
-for ((i=0; i<${#username_list[@]}; i++)); do
-    jumlah[$i]=0
-    pid[$i]=""
-done
+# PID sesi aktif (sshd privilege separation)
+mapfile -t proc < <(ps aux | grep "\\[priv\\]" | awk '{print $2}')
 
-# Ambil log login SSH
-grep -i sshd $LOG | grep -i "Accepted password for" > /tmp/log-ssh.txt
-
-# Ambil pid ssh sesi aktif
-proc=( $(ps aux | grep "\[priv\]" | awk '{print $2}') )
+declare -A user_ips         # user -> "ip1 ip2 ..."
+declare -A user_ip_pids     # "user|ip" -> "pid pid"
 
 for PID in "${proc[@]}"; do
-    grep "sshd\[$PID\]" /tmp/log-ssh.txt > /tmp/log-ssh-pid.txt
-    NUM=$(wc -l < /tmp/log-ssh-pid.txt)
-    USER=$(awk '{print $9}' /tmp/log-ssh-pid.txt)
-    IP=$(awk '{print $11}' /tmp/log-ssh-pid.txt)
+    line=$(grep "sshd\[$PID\]" /tmp/log-ssh.txt | tail -n1)
+    [ -z "$line" ] && continue
+    USER=$(echo "$line" | awk '{print $9}')
+    IP=$(echo "$line"   | awk '{print $11}')
+    [ -z "$USER" ] || [ -z "$IP" ] && continue
 
-    if [ "$NUM" -eq 1 ]; then
-        for ((i=0; i<${#username_list[@]}; i++)); do
-            if [ "$USER" == "${username_list[$i]}" ]; then
-                jumlah[$i]=$((jumlah[$i] + 1))
-                pid[$i]="${pid[$i]} $PID"
-            fi
-        done
+    key="${USER}|${IP}"
+    user_ip_pids[$key]="${user_ip_pids[$key]} $PID"
+
+    if [[ -z "${user_ips[$USER]}" ]]; then
+        user_ips[$USER]="$IP"
+    else
+        # Tambahkan IP hanya jika belum ada
+        if ! grep -qw "$IP" <<<"${user_ips[$USER]}"; then
+            user_ips[$USER]="${user_ips[$USER]} $IP"
+        fi
     fi
 done
 
-# Eksekusi kill jika lebih dari MAX
 hit=0
-for ((i=0; i<${#username_list[@]}; i++)); do
-    if [ ${jumlah[$i]} -gt $MAX ]; then
-        date=$(date +"%Y-%m-%d %X")
-        echo "$date - ${username_list[$i]} - ${jumlah[$i]}"
-        echo "$date - ${username_list[$i]} - ${jumlah[$i]}" >> /root/log-limit.txt
-        kill ${pid[$i]}
+log_file="/root/log-limit.txt"
+
+for user in "${username_list[@]}"; do
+    ips=(${user_ips[$user]})
+    count=${#ips[@]}
+    if (( count > MAX )); then
+        date_now=$(date +"%Y-%m-%d %H:%M:%S")
+        echo "$date_now - $user - $count" | tee -a "$log_file"
+        # Kill semua sesi dari IP yang melebihi kuota (mulai IP ke-(MAX+1))
+        for ip in "${ips[@]:MAX}"; do
+            kill ${user_ip_pids["$user|$ip"]} 2>/dev/null
+        done
         hit=$((hit + 1))
     fi
 done
 
-# Restart ssh jika ada yang dikill
-if [ $hit -gt 0 ]; then
-    if [ $OS -eq 1 ]; then
-        service ssh restart > /dev/null 2>&1
-    else
-        service sshd restart > /dev/null 2>&1
-    fi
+# Restart SSH jika ada sesi yang dikill
+if (( hit > 0 )); then
+    service "$SERVICE" restart > /dev/null 2>&1
 fi
