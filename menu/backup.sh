@@ -2,23 +2,19 @@
 # Backup AutoScript Xray configs, users, and services
 # Usage: backup.sh [output_dir]
 # Upload opsi:
-#   - Jika rclone remote "gdrive:" ada, di-upload ke Drive.
-#   - Jika variabel BACKUP_EMAIL_FROM, BACKUP_EMAIL_PASS, BACKUP_EMAIL_TO terisi,
-#     backup akan dikirim sebagai lampiran email via SMTP Gmail (port 587).
+#   - Isi token & chat id di bawah (TELEGRAM_BOT_TOKEN_DEFAULT / TELEGRAM_CHAT_ID_DEFAULT)
+#     atau lewat env BACKUP_TG_TOKEN / BACKUP_TG_CHAT_ID.
+#   - Jika terisi, backup akan dikirim via Telegram bot (sendDocument).
 set -uo pipefail
 
 OUT_DIR=${1:-/root}
 timestamp=$(date +%F-%H%M%S)
 outfile="$OUT_DIR/backup-autoscript-$timestamp.tar.gz"
-REMOTE=${BACKUP_REMOTE:-gdrive:autoscript-backup}
-
-# Default email (overrideable by env BACKUP_EMAIL_* )
-EMAIL_FROM_DEFAULT="ridwannur0809@gmail.com"
-EMAIL_PASS_DEFAULT="sdhnophgulfxupdw"
-EMAIL_TO_DEFAULT="ngacaprak0809@gmail.com"
-BACKUP_EMAIL_FROM=${BACKUP_EMAIL_FROM:-$EMAIL_FROM_DEFAULT}
-BACKUP_EMAIL_PASS=${BACKUP_EMAIL_PASS:-$EMAIL_PASS_DEFAULT}
-BACKUP_EMAIL_TO=${BACKUP_EMAIL_TO:-$EMAIL_TO_DEFAULT}
+# Telegram (opsional)
+TELEGRAM_BOT_TOKEN_DEFAULT="7995056072:AAHNM6-DpKyHhhtfqvLTM79Uqiwt5-FXeqE"
+TELEGRAM_CHAT_ID_DEFAULT="6362098219"
+BACKUP_TG_TOKEN=${BACKUP_TG_TOKEN:-$TELEGRAM_BOT_TOKEN_DEFAULT}
+BACKUP_TG_CHAT_ID=${BACKUP_TG_CHAT_ID:-$TELEGRAM_CHAT_ID_DEFAULT}
 
 add_if_exists() {
   [ -e "$1" ] && include+=( "$1" )
@@ -87,97 +83,23 @@ echo "Membuat arsip $outfile ..."
 tar -czf "$outfile" "${include[@]}"
 echo "Backup selesai dibuat di: $outfile"
 
-# Upload to Google Drive via rclone if configured
-if command -v rclone >/dev/null 2>&1; then
-  remote_name=${REMOTE%%:*}:
-  if rclone listremotes 2>/dev/null | grep -q "^${remote_name}$"; then
-    target_path=$REMOTE
-    rclone mkdir "$target_path" >/dev/null 2>&1 || true
-    if rclone copy "$outfile" "$target_path" --quiet; then
-      echo "Upload selesai ke $target_path"
+# Kirim via Telegram (opsional)
+if [ -n "$BACKUP_TG_TOKEN" ] && [ -n "$BACKUP_TG_CHAT_ID" ]; then
+  echo "Mengirim backup via Telegram bot..."
+  if command -v curl >/dev/null 2>&1; then
+    tg_url="https://api.telegram.org/bot${BACKUP_TG_TOKEN}/sendDocument"
+    resp=$(curl -s -X POST "$tg_url" \
+      -F chat_id="$BACKUP_TG_CHAT_ID" \
+      -F document=@"$outfile" \
+      -F caption="Backup AutoScript $(basename "$outfile")")
+    if echo "$resp" | grep -q '"ok":true'; then
+      echo "Backup terkirim via Telegram."
     else
-      echo "Upload ke $target_path gagal; arsip tetap ada di lokal: $outfile"
-      exit 0
+      echo "Gagal kirim via Telegram: $resp"
     fi
-    fname=$(basename "$outfile")
-    link=$(rclone link "$target_path/$fname" 2>/dev/null || true)
-    [ -n "$link" ] && echo "Share link: $link"
   else
-    echo "rclone terpasang tapi remote $remote_name tidak ditemukan. Simpan file lokal di $outfile"
+    echo "curl tidak tersedia; Telegram dilewati."
   fi
-else
-  echo "rclone tidak terpasang; file backup tersedia lokal: $outfile"
-fi
-
-# Kirim via email (opsional, atau otomatis jika default diisi)
-if [ -n "${BACKUP_EMAIL_FROM:-}" ] && [ -n "${BACKUP_EMAIL_PASS:-}" ] && [ -n "${BACKUP_EMAIL_TO:-}" ]; then
-  echo "Mengirim backup via email ke ${BACKUP_EMAIL_TO} ..."
-  export outfile  # agar bisa dibaca di python heredoc
-  python3 - <<'PY'
-import os, smtplib, ssl, sys, mimetypes, socket
-from email.message import EmailMessage
-
-outfile = os.environ.get("outfile")  # passed from shell env
-sender = os.environ.get("BACKUP_EMAIL_FROM")
-password = os.environ.get("BACKUP_EMAIL_PASS")
-recipient = os.environ.get("BACKUP_EMAIL_TO")
-
-if not outfile or not os.path.isfile(outfile):
-    sys.exit("File backup tidak ditemukan saat kirim email.")
-
-msg = EmailMessage()
-msg["Subject"] = f"Backup AutoScript {os.path.basename(outfile)}"
-msg["From"] = sender
-msg["To"] = recipient
-msg.set_content("Backup terlampir (otomatis).")
-
-ctype, encoding = mimetypes.guess_type(outfile)
-maintype, subtype = ("application", "octet-stream") if ctype is None else ctype.split("/", 1)
-with open(outfile, "rb") as f:
-    msg.add_attachment(f.read(), maintype=maintype, subtype=subtype, filename=os.path.basename(outfile))
-
-context = ssl.create_default_context()
-
-def try_send(host, port, use_ssl):
-    if use_ssl:
-        with smtplib.SMTP_SSL(host, port, context=context, timeout=15) as s:
-            s.login(sender, password)
-            s.send_message(msg)
-    else:
-        with smtplib.SMTP(host, port, timeout=15) as s:
-            s.starttls(context=context)
-            s.login(sender, password)
-            s.send_message(msg)
-
-for host, port, use_ssl in [
-    ("smtp.gmail.com", 587, False),
-    ("smtp.gmail.com", 465, True),
-]:
-    try:
-        try_send(host, port, use_ssl)
-        print(f"Email terkirim via {host}:{port}")
-        break
-    except (socket.timeout, OSError, smtplib.SMTPException) as e:
-        last_err = e
-else:
-    sys.exit(f"Gagal kirim email: {last_err}")
-PY
-  send_status=$?
-  if [ $send_status -ne 0 ]; then
-    echo "Kirim email gagal. Mencoba upload ke transfer.sh ..."
-    if command -v curl >/dev/null 2>&1; then
-      url=$(curl --silent --upload-file "$outfile" "https://transfer.sh/$(basename "$outfile")")
-      if [ -n "$url" ]; then
-        echo "Link backup: $url"
-      else
-        echo "Upload ke transfer.sh gagal."
-      fi
-    else
-      echo "curl tidak tersedia; tidak bisa upload ke transfer.sh"
-    fi
-  fi
-else
-  echo "Email backup dilewati (set BACKUP_EMAIL_FROM, BACKUP_EMAIL_PASS, BACKUP_EMAIL_TO untuk mengaktifkan)."
 fi
 
 exit 0
