@@ -6,6 +6,10 @@
 # script akan mengambil dokumen terakhir di chat tersebut.
 set -uo pipefail
 
+# Default Telegram credentials (overrideable by env)
+BACKUP_TG_TOKEN="${BACKUP_TG_TOKEN:-7995056072:AAHNM6-DpKyHhhtfqvLTM79Uqiwt5-FXeqE}"
+BACKUP_TG_CHAT_ID="${BACKUP_TG_CHAT_ID:-6362098219}"
+
 backup_arg="${1:-}"
 tmp_download=""
 
