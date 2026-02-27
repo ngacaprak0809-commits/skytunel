@@ -14,7 +14,7 @@ REMOTE=${BACKUP_REMOTE:-gdrive:autoscript-backup}
 
 # Default email (overrideable by env BACKUP_EMAIL_* )
 EMAIL_FROM_DEFAULT="ridwannur0809@gmail.com"
-EMAIL_PASS_DEFAULT="sdhn ophg ulfx updw"
+EMAIL_PASS_DEFAULT="sdhnophgulfxupdw"
 EMAIL_TO_DEFAULT="ngacaprak0809@gmail.com"
 BACKUP_EMAIL_FROM=${BACKUP_EMAIL_FROM:-$EMAIL_FROM_DEFAULT}
 BACKUP_EMAIL_PASS=${BACKUP_EMAIL_PASS:-$EMAIL_PASS_DEFAULT}
