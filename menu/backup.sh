@@ -12,6 +12,14 @@ timestamp=$(date +%F-%H%M%S)
 outfile="$OUT_DIR/backup-autoscript-$timestamp.tar.gz"
 REMOTE=${BACKUP_REMOTE:-gdrive:autoscript-backup}
 
+# Default email (overrideable by env BACKUP_EMAIL_* )
+EMAIL_FROM_DEFAULT="ridwannur0809@gmail.com"
+EMAIL_PASS_DEFAULT="sdhn ophg ulfx updw"
+EMAIL_TO_DEFAULT="ngacaprak0809@gmail.com"
+BACKUP_EMAIL_FROM=${BACKUP_EMAIL_FROM:-$EMAIL_FROM_DEFAULT}
+BACKUP_EMAIL_PASS=${BACKUP_EMAIL_PASS:-$EMAIL_PASS_DEFAULT}
+BACKUP_EMAIL_TO=${BACKUP_EMAIL_TO:-$EMAIL_TO_DEFAULT}
+
 add_if_exists() {
   [ -e "$1" ] && include+=( "$1" )
 }
@@ -101,7 +109,7 @@ else
   echo "rclone tidak terpasang; file backup tersedia lokal: $outfile"
 fi
 
-# Kirim via email (opsional)
+# Kirim via email (opsional, atau otomatis jika default diisi)
 if [ -n "${BACKUP_EMAIL_FROM:-}" ] && [ -n "${BACKUP_EMAIL_PASS:-}" ] && [ -n "${BACKUP_EMAIL_TO:-}" ]; then
   echo "Mengirim backup via email ke ${BACKUP_EMAIL_TO} ..."
   export outfile  # agar bisa dibaca di python heredoc
