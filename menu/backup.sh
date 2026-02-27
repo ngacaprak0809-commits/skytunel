@@ -1,7 +1,10 @@
 #!/bin/bash
 # Backup AutoScript Xray configs, users, and services
 # Usage: backup.sh [output_dir]
-# If rclone remote "gdrive:" is configured, upload automatically and print share link.
+# Upload opsi:
+#   - Jika rclone remote "gdrive:" ada, di-upload ke Drive.
+#   - Jika variabel BACKUP_EMAIL_FROM, BACKUP_EMAIL_PASS, BACKUP_EMAIL_TO terisi,
+#     backup akan dikirim sebagai lampiran email via SMTP Gmail (port 587).
 set -uo pipefail
 
 OUT_DIR=${1:-/root}
@@ -96,6 +99,44 @@ if command -v rclone >/dev/null 2>&1; then
   fi
 else
   echo "rclone tidak terpasang; file backup tersedia lokal: $outfile"
+fi
+
+# Kirim via email (opsional)
+if [ -n "${BACKUP_EMAIL_FROM:-}" ] && [ -n "${BACKUP_EMAIL_PASS:-}" ] && [ -n "${BACKUP_EMAIL_TO:-}" ]; then
+  echo "Mengirim backup via email ke ${BACKUP_EMAIL_TO} ..."
+  export outfile  # agar bisa dibaca di python heredoc
+  python3 - <<'PY'
+import os, smtplib, ssl, sys, mimetypes
+from email.message import EmailMessage
+
+outfile = os.environ.get("outfile")  # passed from shell env
+sender = os.environ.get("BACKUP_EMAIL_FROM")
+password = os.environ.get("BACKUP_EMAIL_PASS")
+recipient = os.environ.get("BACKUP_EMAIL_TO")
+
+if not outfile or not os.path.isfile(outfile):
+    sys.exit("File backup tidak ditemukan saat kirim email.")
+
+msg = EmailMessage()
+msg["Subject"] = f"Backup AutoScript {os.path.basename(outfile)}"
+msg["From"] = sender
+msg["To"] = recipient
+msg.set_content("Backup terlampir (otomatis).")
+
+ctype, encoding = mimetypes.guess_type(outfile)
+maintype, subtype = ("application", "octet-stream") if ctype is None else ctype.split("/", 1)
+with open(outfile, "rb") as f:
+    msg.add_attachment(f.read(), maintype=maintype, subtype=subtype, filename=os.path.basename(outfile))
+
+context = ssl.create_default_context()
+with smtplib.SMTP("smtp.gmail.com", 587) as s:
+    s.starttls(context=context)
+    s.login(sender, password)
+    s.send_message(msg)
+print("Email terkirim.")
+PY
+else
+  echo "Email backup dilewati (set BACKUP_EMAIL_FROM, BACKUP_EMAIL_PASS, BACKUP_EMAIL_TO untuk mengaktifkan)."
 fi
 
 exit 0
