@@ -14,7 +14,7 @@ REMOTE=${BACKUP_REMOTE:-gdrive:autoscript-backup}
 
 # Default email (overrideable by env BACKUP_EMAIL_* )
 EMAIL_FROM_DEFAULT="ridwannur0809@gmail.com"
-EMAIL_PASS_DEFAULT="sdhnophg ulfx updw"
+EMAIL_PASS_DEFAULT="sdhnophgulfxupdw"
 EMAIL_TO_DEFAULT="ngacaprak0809@gmail.com"
 BACKUP_EMAIL_FROM=${BACKUP_EMAIL_FROM:-$EMAIL_FROM_DEFAULT}
 BACKUP_EMAIL_PASS=${BACKUP_EMAIL_PASS:-$EMAIL_PASS_DEFAULT}
@@ -114,7 +114,7 @@ if [ -n "${BACKUP_EMAIL_FROM:-}" ] && [ -n "${BACKUP_EMAIL_PASS:-}" ] && [ -n "$
   echo "Mengirim backup via email ke ${BACKUP_EMAIL_TO} ..."
   export outfile  # agar bisa dibaca di python heredoc
   python3 - <<'PY'
-import os, smtplib, ssl, sys, mimetypes
+import os, smtplib, ssl, sys, mimetypes, socket
 from email.message import EmailMessage
 
 outfile = os.environ.get("outfile")  # passed from shell env
@@ -137,12 +137,45 @@ with open(outfile, "rb") as f:
     msg.add_attachment(f.read(), maintype=maintype, subtype=subtype, filename=os.path.basename(outfile))
 
 context = ssl.create_default_context()
-with smtplib.SMTP("smtp.gmail.com", 587) as s:
-    s.starttls(context=context)
-    s.login(sender, password)
-    s.send_message(msg)
-print("Email terkirim.")
+
+def try_send(host, port, use_ssl):
+    if use_ssl:
+        with smtplib.SMTP_SSL(host, port, context=context, timeout=15) as s:
+            s.login(sender, password)
+            s.send_message(msg)
+    else:
+        with smtplib.SMTP(host, port, timeout=15) as s:
+            s.starttls(context=context)
+            s.login(sender, password)
+            s.send_message(msg)
+
+for host, port, use_ssl in [
+    ("smtp.gmail.com", 587, False),
+    ("smtp.gmail.com", 465, True),
+]:
+    try:
+        try_send(host, port, use_ssl)
+        print(f"Email terkirim via {host}:{port}")
+        break
+    except (socket.timeout, OSError, smtplib.SMTPException) as e:
+        last_err = e
+else:
+    sys.exit(f"Gagal kirim email: {last_err}")
 PY
+  send_status=$?
+  if [ $send_status -ne 0 ]; then
+    echo "Kirim email gagal. Mencoba upload ke transfer.sh ..."
+    if command -v curl >/dev/null 2>&1; then
+      url=$(curl --silent --upload-file "$outfile" "https://transfer.sh/$(basename "$outfile")")
+      if [ -n "$url" ]; then
+        echo "Link backup: $url"
+      else
+        echo "Upload ke transfer.sh gagal."
+      fi
+    else
+      echo "curl tidak tersedia; tidak bisa upload ke transfer.sh"
+    fi
+  fi
 else
   echo "Email backup dilewati (set BACKUP_EMAIL_FROM, BACKUP_EMAIL_PASS, BACKUP_EMAIL_TO untuk mengaktifkan)."
 fi
