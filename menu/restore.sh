@@ -1,59 +1,85 @@
 #!/bin/bash
 # Restore AutoScript Xray backup created by backup.sh
-# Usage: restore.sh /path/to/backup.tar.gz  OR restore.sh <gdrive|http> URL
+# Usage: restore.sh /path/to/backup.tar.gz
+#        restore.sh tg:<file_id>    (unduh dari Telegram menggunakan bot)
+# Jika argumen kosong dan BACKUP_TG_TOKEN/BACKUP_TG_CHAT_ID terisi,
+# script akan mengambil dokumen terakhir di chat tersebut.
 set -uo pipefail
 
-backup_file="${1:-}"
-if [ -z "$backup_file" ]; then
-  read -e -p "Masukkan path file backup (.tar.gz) atau link GDrive/HTTP: " backup_file
-fi
-
+backup_arg="${1:-}"
 tmp_download=""
-if [ -f "$backup_file" ]; then
-  : # local file ok
-elif [[ "$backup_file" =~ ^https?:// ]]; then
+
+# Unduh dari Telegram jika diminta
+download_from_telegram() {
+  local file_id="$1"
   tmp_download=$(mktemp /tmp/backup-restore-XXXX.tar.gz)
-  echo "Mengunduh backup dari URL menggunakan gdown..."
-  if command -v gdown >/dev/null 2>&1; then
-    if ! gdown --fuzzy "$backup_file" -O "$tmp_download"; then
-      echo "gdown gagal mengunduh file."
-      exit 1
-    fi
-  else
-    if command -v rclone >/dev/null 2>&1; then
-      echo "gdown tidak ada, mencoba rclone copyurl..."
-      if ! rclone copyurl "$backup_file" "$tmp_download" >/dev/null 2>&1; then
-        echo "rclone copyurl gagal."
-        # fallback to pip3 install gdown
-      else
-        :
-      fi
-    fi
-    if [ ! -s "$tmp_download" ]; then
-      if command -v pip3 >/dev/null 2>&1; then
-        echo "Menginstall gdown..."
-        if ! pip3 install --no-cache-dir gdown >/dev/null 2>&1; then
-          echo "Install gdown gagal. Unduh manual lalu jalankan ulang. (Pastikan python3-pip terpasang: apt install python3-pip)"
-          exit 1
-        fi
-        if ! gdown --fuzzy "$backup_file" -O "$tmp_download"; then
-          echo "gdown gagal mengunduh file."
-          exit 1
-        fi
-      else
-        echo "gdown & pip3 tidak tersedia, dan rclone tidak berhasil. Unduh manual lalu jalankan restore lagi."
-        exit 1
-      fi
-    fi
+  TG_TOKEN="${BACKUP_TG_TOKEN:-}"
+  TG_CHAT_ID="${BACKUP_TG_CHAT_ID:-}"
+  if [ -z "$TG_TOKEN" ]; then
+    echo "BACKUP_TG_TOKEN belum diset."
+    exit 1
   fi
-  backup_file="$tmp_download"
+
+  python3 - <<'PY'
+import os, sys, json, urllib.request
+
+token = os.environ["BACKUP_TG_TOKEN"]
+chat_id = os.environ.get("BACKUP_TG_CHAT_ID")
+file_id = os.environ.get("TG_FILE_ID")
+out = os.environ["TMP_OUT"]
+
+def latest_file_id():
+    url = f"https://api.telegram.org/bot{token}/getUpdates"
+    with urllib.request.urlopen(url) as r:
+        data = json.load(r)
+    docs = []
+    for upd in data.get("result", []):
+        msg = upd.get("message") or upd.get("channel_post") or {}
+        if chat_id and str(msg.get("chat", {}).get("id")) != chat_id:
+            continue
+        if "document" in msg:
+            docs.append(msg["document"]["file_id"])
+    if not docs:
+        sys.exit("NO_DOC")
+    return docs[-1]
+
+if not file_id:
+    file_id = latest_file_id()
+
+# Get file path
+with urllib.request.urlopen(f"https://api.telegram.org/bot{token}/getFile?file_id={file_id}") as r:
+    data = json.load(r)
+file_path = data["result"]["file_path"]
+url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+urllib.request.urlretrieve(url, out)
+print(out)
+PY
+  return $?
+}
+
+if [ -z "$backup_arg" ] || [[ "$backup_arg" =~ ^tg: ]]; then
+  TG_FILE_ID="${backup_arg#tg:}"
+  export BACKUP_TG_TOKEN BACKUP_TG_CHAT_ID TG_FILE_ID TMP_OUT
+  TMP_OUT=$(mktemp /tmp/backup-restore-XXXX.tar.gz)
+  if ! download_from_telegram "$TG_FILE_ID"; then
+    echo "Gagal mengambil backup dari Telegram."
+    exit 1
+  fi
+  backup_file="$TMP_OUT"
+elif [ -f "$backup_arg" ]; then
+  backup_file="$backup_arg"
 else
-  echo "File/link tidak ditemukan: $backup_file"
+  echo "File backup tidak ditemukan: $backup_arg"
   exit 1
 fi
 
 if [ ! -s "$backup_file" ]; then
   echo "File backup kosong atau tidak berhasil diunduh: $backup_file"
+  exit 1
+fi
+
+if ! tar -tzf "$backup_file" >/dev/null 2>&1; then
+  echo "File bukan arsip .tar.gz yang valid."
   exit 1
 fi
 
