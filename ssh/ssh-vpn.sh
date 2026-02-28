@@ -317,7 +317,7 @@ wget -O auto-reboot "https://raw.githubusercontent.com/ngacaprak0809-commits/sky
 wget -O restart "https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/menu/restart.sh"
 wget -O bw "https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/menu/bw.sh"
 wget -O m-tcp "https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/menu/tcp.sh"
-wget -O xp "hhttps://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/ssh/xp.sh"
+wget -O xp "https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/ssh/xp.sh"
 wget -O sshws "https://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/ssh/sshws.sh"
 wget -O m-dns "hhttps://raw.githubusercontent.com/ngacaprak0809-commits/skytunel/refs/heads/main/menu/m-dns.sh"
 
