@@ -25,7 +25,29 @@ case $opt in
 3) clear ; renew-tr ;;
 4) clear ; del-tr ;;
 5) clear ; cek-tr ;;
-6) clear ; cat /etc/log-create-trojan.log ; exit ;;
+6) clear ;
+   if [ -s /etc/log-create-trojan.log ]; then
+     awk '
+       /Remarks[[:space:]]*:/ {
+         gsub(/\033\[[0-9;]*[A-Za-z]/,"",$0);
+         gsub(/.*:[[:space:]]*/,"",$0);
+         remark=$0;
+       }
+       /Expired On[[:space:]]*:/ {
+         gsub(/\033\[[0-9;]*[A-Za-z]/,"",$0);
+         gsub(/.*:[[:space:]]*/,"",$0);
+         if(remark!=""){
+           printf "%-25s %s\n", remark, $0;
+           remark="";
+         }
+       }
+     ' /etc/log-create-trojan.log | column -t
+   else
+     echo "Log Trojan kosong."
+   fi
+   echo ""
+   read -n 1 -s -r -p "Press any key to back on menu"
+   exit ;;
 0) clear ; menu ;;
 x) exit ;;
 *) echo "Anda Salah Tekan" ; sleep 1 ; m-trojan ;;
