@@ -25,7 +25,19 @@ case $opt in
 3) clear ; renew-ws ; exit ;;
 4) clear ; del-ws ; exit ;;
 5) clear ; cek-ws ; exit ;;
-6) clear ; cat /etc/log-create-vmess.log ; exit ;;
+6) clear ;
+   if [ -s /etc/log-create-vmess.log ]; then
+     awk 'BEGIN{FS=":"}
+          function strip(s){gsub(/\033\[[0-9;]*[mK]/,"",s); return s}
+          /^Remarks[ \t]*:/ {remark=$0; remark=strip(remark); sub(/^[^:]*:[ \t]*/,"",remark); next}
+          /^Expired On[ \t]*:/ {exp=$0; exp=strip(exp); sub(/^[^:]*:[ \t]*/,"",exp); if(remark!=""){printf "%-25s %s\n", remark, exp; remark=""}}
+         ' /etc/log-create-vmess.log | column -t
+   else
+     echo "Log VMess kosong."
+   fi
+   echo ""
+   read -n 1 -s -r -p "Press any key to back on menu"
+   exit ;;
 0) clear ; menu ; exit ;;
 x) exit ;;
 *) echo "Anda salah tekan " ; sleep 1 ; m-sshovpn ;;
