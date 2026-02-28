@@ -27,11 +27,24 @@ case $opt in
 5) clear ; cek-ws ; exit ;;
 6) clear ;
    if [ -s /etc/log-create-vmess.log ]; then
-     awk 'BEGIN{FS=":"}
-          function strip(s){gsub(/\033\[[0-9;]*[mK]/,"",s); return s}
-          /^Remarks[ \t]*:/ {remark=$0; remark=strip(remark); sub(/^[^:]*:[ \t]*/,"",remark); next}
-          /^Expired On[ \t]*:/ {exp=$0; exp=strip(exp); sub(/^[^:]*:[ \t]*/,"",exp); if(remark!=""){printf "%-25s %s\n", remark, exp; remark=""}}
-         ' /etc/log-create-vmess.log | column -t
+     awk '
+       /^Remarks[[:space:]]*:/ {
+         line=$0
+         gsub(/\033\[[0-9;]*[mK]/,"",line)   # strip ANSI color
+         sub(/^[^:]*:[[:space:]]*/,"",line)
+         remark=line
+         next
+       }
+       /^Expired On[[:space:]]*:/ {
+         line=$0
+         gsub(/\033\[[0-9;]*[mK]/,"",line)
+         sub(/^[^:]*:[[:space:]]*/,"",line)
+         if(remark!=""){
+           printf "%-25s %s\n", remark, line
+           remark=""
+         }
+       }
+     ' /etc/log-create-vmess.log | column -t
    else
      echo "Log VMess kosong."
    fi
