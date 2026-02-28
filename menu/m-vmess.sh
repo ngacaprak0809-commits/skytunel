@@ -28,20 +28,21 @@ case $opt in
 6) clear ;
    if [ -s /etc/log-create-vmess.log ]; then
      awk '
-       /^Remarks[[:space:]]*:/ {
+       {
          line=$0
-         gsub(/\033\[[0-9;]*[mK]/,"",line)   # strip ANSI color
-         sub(/^[^:]*:[[:space:]]*/,"",line)
-         remark=line
+         gsub(/\033\[[0-9;]*[A-Za-z]/,"",line)   # strip ANSI color codes
+       }
+       line ~ /^Remarks[[:space:]]*:/ {
+         remark = substr(line, index(line, ":") + 1)
+         gsub(/^[ \t]+/, "", remark)
          next
        }
-       /^Expired On[[:space:]]*:/ {
-         line=$0
-         gsub(/\033\[[0-9;]*[mK]/,"",line)
-         sub(/^[^:]*:[[:space:]]*/,"",line)
-         if(remark!=""){
-           printf "%-25s %s\n", remark, line
-           remark=""
+       line ~ /^Expired On[[:space:]]*:/ {
+         exp = substr(line, index(line, ":") + 1)
+         gsub(/^[ \t]+/, "", exp)
+         if (remark != "") {
+           printf "%-25s %s\n", remark, exp
+           remark = ""
          }
        }
      ' /etc/log-create-vmess.log | column -t
