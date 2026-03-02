@@ -61,6 +61,9 @@ vnstat_service=$(/etc/init.d/vnstat status | grep Active | awk '{print $3}' | cu
 cron_service=$(/etc/init.d/cron status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 fail2ban_service=$(/etc/init.d/fail2ban status | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 wstls=$(systemctl status ws-stunnel.service | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+# ZIVPN services
+zivpn_service=$(systemctl is-active zivpn.service 2>/dev/null)
+zivpn_api_service=$(systemctl is-active zivpn-api.service 2>/dev/null)
 
 # COLOR VALIDATION
 RED='\033[0;31m'
@@ -170,6 +173,19 @@ else
    status_shadowsocks="${RED}  Not Running ${NC}  ( Error )${NC}"
 fi
 
+# STATUS ZIVPN (UDP)
+if [[ $zivpn_service == "active" ]]; then
+   status_zivpn=" ${GREEN}Running ${NC}( No Error )"
+else
+   status_zivpn="${RED}  Not Running ${NC}  ( Error )"
+fi
+# STATUS ZIVPN API
+if [[ $zivpn_api_service == "active" ]]; then
+   status_zivpn_api=" ${GREEN}Running ${NC}( No Error )"
+else
+   status_zivpn_api="${RED}  Not Running ${NC}  ( Error )"
+fi
+
 
 
 # TOTAL RAM
@@ -216,10 +232,11 @@ echo -e "\e[1;32m XRAYS Trojan         \e[0m: $status_virus_trojan"
 echo -e "\e[1;32m Shadowsocks          \e[0m: $status_shadowsocks"
 echo -e "\e[1;32m Websocket TLS        \e[0m: $swstls"
 echo -e "\e[1;32m Websocket None TLS   \e[0m: $swstls"
+echo -e "\e[1;32m ZIVPN UDP            \e[0m: $status_zivpn"
+echo -e "\e[1;32m ZIVPN API            \e[0m: $status_zivpn_api"
 echo -e "\e[1;33m -------------------------------------------------\e[0m"
 echo -e "\e[1;34m                     t.me/givpn                   \e[0m"
 echo -e "\e[1;33m -------------------------------------------------\e[0m"
 echo ""
 read -n 1 -s -r -p "Press any key to back on menu"
 menu
-
