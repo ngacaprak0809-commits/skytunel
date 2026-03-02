@@ -39,6 +39,10 @@ add_if_exists "/home/re_otm"
 add_if_exists "/etc/cron.d/xp_otm"
 add_if_exists "/root/udp"
 add_if_exists "/root/nsdomain"
+# ZIVPN (UDP) configs
+add_if_exists "/etc/zivpn"
+add_if_exists "/etc/systemd/system/zivpn.service"
+add_if_exists "/etc/systemd/system/zivpn-api.service"
 # System accounts (needed agar user SSH ikut tersalin)
 add_if_exists "/etc/passwd"
 add_if_exists "/etc/shadow"
