@@ -1,111 +1,255 @@
 #!/bin/bash
-# Restore AutoScript Xray backup created by backup.sh
-# Usage: restore.sh /path/to/backup.tar.gz  OR restore.sh <gdrive|http> URL
-set -uo pipefail
 
-backup_file="${1:-}"
-if [ -z "$backup_file" ]; then
-  read -e -p "Masukkan path file backup (.tar.gz) atau link GDrive/HTTP: " backup_file
-fi
-
-tmp_download=""
-tmp_dir=""
-
-install_gdown() {
-  if command -v gdown >/dev/null 2>&1; then
-    return
-  fi
-  if ! command -v pip3 >/dev/null 2>&1; then
-    apt-get update -y >/dev/null 2>&1 || true
-    apt-get install -y python3-pip >/dev/null 2>&1 || true
-  fi
-  echo "Menginstall gdown..."
-  if ! pip3 install --no-cache-dir gdown >/dev/null 2>&1; then
-    echo "Install gdown gagal. Unduh manual file backup lalu jalankan ulang."
-    exit 1
-  fi
-}
-
-if [ -f "$backup_file" ]; then
-  : # local file ok
-elif [[ "$backup_file" =~ ^https?:// ]]; then
-  if [[ "$backup_file" =~ drive.google.com/drive/folders ]]; then
-    install_gdown
-    tmp_dir=$(mktemp -d /tmp/backup-folder-XXXX)
-    echo "Link folder Google Drive terdeteksi, mengunduh dengan gdown --folder..."
-    if ! gdown --fuzzy --folder "$backup_file" -O "$tmp_dir" >/dev/null 2>&1; then
-      echo "gdown gagal mengunduh folder. Pastikan link dapat diakses publik."
-      exit 1
-    fi
-    backup_file=$(find "$tmp_dir" -maxdepth 2 -type f -name "*.tar.gz" | head -n1)
-    if [ -z "$backup_file" ]; then
-      echo "Tidak menemukan file .tar.gz di folder tersebut. Gunakan link langsung ke file backup."
-      exit 1
-    fi
-  else
-    tmp_download=$(mktemp /tmp/backup-restore-XXXX.tar.gz)
-    echo "Mengunduh backup dari URL..."
-    if command -v gdown >/dev/null 2>&1; then
-      gdown --fuzzy "$backup_file" -O "$tmp_download" >/dev/null 2>&1 || true
-    fi
-    if [ ! -s "$tmp_download" ] && command -v rclone >/dev/null 2>&1; then
-      echo "gdown tidak ada/ gagal, mencoba rclone copyurl..."
-      rclone copyurl "$backup_file" "$tmp_download" >/dev/null 2>&1 || true
-    fi
-    if [ ! -s "$tmp_download" ]; then
-      install_gdown
-      if ! gdown --fuzzy "$backup_file" -O "$tmp_download"; then
-        echo "gdown gagal mengunduh file."
-        exit 1
-      fi
-    fi
-    backup_file="$tmp_download"
-  fi
-else
-  echo "File/link tidak ditemukan: $backup_file"
-  exit 1
-fi
-
-if [ ! -s "$backup_file" ]; then
-  echo "File backup kosong atau tidak berhasil diunduh: $backup_file"
-  exit 1
-fi
-
-if ! tar -tzf "$backup_file" >/dev/null 2>&1; then
-  echo "File bukan arsip .tar.gz yang valid. Pastikan link langsung ke file backup, bukan halaman HTML/folder."
-  exit 1
-fi
-
-echo "Menghentikan layanan terkait..."
-for svc in xray vmess-grpc vless-grpc udp-custom client-sldns server-sldns ws-dropbear ws-stunnel; do
-  systemctl stop "$svc" 2>/dev/null || true
-done
-
-echo "Menjalankan restore ke root (/)..."
-if ! tar -xzf "$backup_file" -C /; then
-  echo "Gagal mengekstrak arsip backup."
-  exit 1
-fi
-
-# Pastikan permission file akun benar
-if [ -f /etc/shadow ]; then chmod 600 /etc/shadow; fi
-if [ -f /etc/gshadow ]; then chmod 600 /etc/gshadow; fi
-if [ -f /etc/passwd ]; then chmod 644 /etc/passwd; fi
-if [ -f /etc/group ]; then chmod 644 /etc/group; fi
-
-if [ -f /etc/iptables.up.rules ]; then
-  echo "Memulihkan aturan iptables..."
-  iptables-restore < /etc/iptables.up.rules 2>/dev/null || true
-  netfilter-persistent save 2>/dev/null || true
-  netfilter-persistent reload 2>/dev/null || true
-fi
-
-echo "Memuat ulang daemon & menyalakan layanan..."
-systemctl daemon-reload
-for svc in nginx sshd xray vmess-grpc vless-grpc udp-custom client-sldns server-sldns ws-dropbear ws-stunnel openvpn stunnel4; do
-  systemctl restart "$svc" 2>/dev/null || true
-done
-
-echo "Restore selesai. Periksa kembali domain/sertifikat dan pastikan layanan aktif."
-
-[ -n "$tmp_download" ] && rm -f "$tmp_download"
+echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e ""
+echo -e " [\e[36m•1\e[0m] Restart All Services"
+echo -e " [\e[36m•2\e[0m] Restart OpenSSH"
+echo -e " [\e[36m•4\e[0m] Restart Stunnel4"
+echo -e " [\e[36m•5\e[0m] Restart OpenVPN"
+echo -e " [\e[36m•6\e[0m] Restart Squid"
+echo -e " [\e[36m•7\e[0m] Restart Nginx"
+echo -e " [\e[36m•8\e[0m] Restart Badvpn"
+echo -e " [\e[36m•9\e[0m] Restart XRAY"
+echo -e " [\e[36m10\e[0m] Restart WEBSOCKET"
+echo -e " [\e[36m11\e[0m] Restart Trojan Go"
+echo -e ""
+echo -e " [\e[31m•0\e[0m] \e[31mBACK TO MENU\033[0m"
+echo -e   ""
+echo -e   "Press x or [ Ctrl+C ] • To-Exit"
+echo -e   ""
+echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e ""
+read -p " Select menu : " Restart
+echo -e ""
+sleep 1
+clear
+case $Restart in
+                1)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                /etc/init.d/ssh restart
+                /etc/init.d/stunnel4 restart
+                /etc/init.d/openvpn restart
+                /etc/init.d/fail2ban restart
+                /etc/init.d/cron restart
+                /etc/init.d/nginx restart
+                /etc/init.d/squid restart
+                echo -e "[ \033[32mok\033[0m ] Restarting xray Service (via systemctl) "
+                sleep 0.5
+                systemctl restart xray
+                systemctl restart xray.service
+                echo -e "[ \033[32mok\033[0m ] Restarting badvpn Service (via systemctl) "
+                sleep 0.5
+                screen -dmS badvpn badvpn-udpgw --listen-addr 127.0.0.1:7100 --max-clients 500
+                screen -dmS badvpn badvpn-udpgw --listen-addr 127.0.0.1:7200 --max-clients 500
+                screen -dmS badvpn badvpn-udpgw --listen-addr 127.0.0.1:7300 --max-clients 500
+                sleep 0.5
+                echo -e "[ \033[32mok\033[0m ] Restarting websocket Service (via systemctl) "
+                sleep 0.5
+                systemctl restart sshws.service
+                systemctl restart ws-stunnel.service
+                sleep 0.5
+                echo -e "[ \033[32mok\033[0m ] Restarting Trojan Go Service (via systemctl) "
+                sleep 0.5
+                systemctl restart trojan-go.service 
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] ALL Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                2)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                /etc/init.d/ssh restart
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] SSH Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                3)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                 echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                4)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                /etc/init.d/stunnel4 restart
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] Stunnel4 Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                5)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                /etc/init.d/openvpn restart
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] Openvpn Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                6)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                /etc/init.d/squid restart
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] Squid Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                7)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                /etc/init.d/nginx restart
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] Nginx Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                8)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                echo -e "[ \033[32mok\033[0m ] Restarting badvpn Service (via systemctl) "
+                screen -dmS badvpn badvpn-udpgw --listen-addr 127.0.0.1:7300 --max-clients 500
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] Badvpn Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                9)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                echo -e "[ \033[32mok\033[0m ] Restarting xray Service (via systemctl) "
+                systemctl restart xray
+                systemctl restart xray.service
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] XRAY Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                10)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                echo -e "[ \033[32mok\033[0m ] Restarting websocket Service (via systemctl) "
+                sleep 0.5
+                systemctl restart sshws.service
+              
+                systemctl restart ws-stunnel.service
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] WEBSOCKET Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;
+                11)
+                clear
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e "\E[0;100;33m         • RESTART MENU •          \E[0m"
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo -e ""
+                echo -e "[ \033[32mInfo\033[0m ] Restart Begin"
+                sleep 1
+                echo -e "[ \033[32mok\033[0m ] Restarting Trojan Go Service (via systemctl) "
+                sleep 0.5
+                systemctl restart trojan-go.service
+                sleep 0.5
+                echo -e "[ \033[32mInfo\033[0m ] Trojan Go Service Restarted"
+                echo ""
+                echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+                echo ""
+                read -n 1 -s -r -p "Press any key to back on system menu"
+                restart
+                ;;                                                                         
+                0)
+                m-system
+                exit
+                ;;
+                x)
+                clear
+                exit
+                ;;
+                *) echo -e "" ; echo "Anda salah tekan" ; sleep 1 ; restart ;;               
+        esac
